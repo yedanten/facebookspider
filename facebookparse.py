@@ -13,6 +13,8 @@ import argparse
 from urllib import parse
 import re
 import threading
+from selenium import webdriver
+from selenium.webdriver.common.touch_actions import TouchActions
 
 facebook_mobile_index_url = 'https://m.facebook.com'
 ua = UserAgent()
@@ -31,8 +33,9 @@ class fb_user(object):
 		}
 		self.__headers = {
 			'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1',
-			'cookie': 'm_pixel_ratio=3; datr=MY0mXQyulSKzuIbnNj3bZNsE; sb=MY0mXWRhEHaZikj4g-AVYSwB; locale=zh_CN; c_user=100016433047567; xs=22%3AhwSnD_ZqnE3aew%3A2%3A1562807771%3A17776%3A12756; spin=r.1000932104_b.trunk_t.1562898924_s.1_v.2_; act=1562898948523%2F3; dpr=3; presence=EDvF3EtimeF1562899606EuserFA21B16433047567A2EstateFDutF1562899606958CEchFDp_5f1B16433047567F1CC; wd=375x812; x-referer=eyJyIjoiL2hvbWUucGhwIiwiaCI6Ii9ob21lLnBocCIsInMiOiJtIn0%3D; fr=1XTXXdyuocrq3V00H.AWUU7zmJL5W9j-5dC1Wb483McCk.BdIcW4.ZO.AAA.0.0.BdKB12.AWVlHHhO'
+			'cookie': args.cookies
 		}
+		self.css = [],
 
 		self.avatar_string = ''
 		self.base_info = {}
@@ -77,6 +80,10 @@ class fb_user(object):
 			thread.start()
 		for thread in thread_list:
 			thread.join()
+
+	def __extract_cookies(self, cookie):
+		cookies = cookie.split("; ")
+		return cookies
 
 	# 获取头像
 	def get_avatar(self):
@@ -145,75 +152,34 @@ class fb_user(object):
 		print('got friends')
 
 	def get_posts(self):
-		print("getting posts……")
-		s = requests.Session()
-		s.mount('http://', HTTPAdapter(max_retries=3))
-		s.mount('https://', HTTPAdapter(max_retries=3))
-
+		options = webdriver.ChromeOptions()
+		options.add_argument('--disable-gpu')
+		options.add_argument('disable-infobars')
+		options.add_argument('--hide-scrollbars')
+		options.add_argument('blink-settings=imagesEnabled=false')
+		options.add_argument('user-agent=' + self.__headers['user-agent'])
+		options.add_argument('--proxy-server=http://127.0.0.1:1080')
+		driver = webdriver.Chrome(chrome_options=options)
+		driver.get('https://m.facebook.com')
 		
+		time.sleep(2)
+		for x in self.__extract_cookies(self.__headers['cookie']):
+			driver.add_cookie({'name': x.split('=')[0], 'value': x.split('=')[1]})
+
 		if self.userid.isdigit():
 			url = 'https://m.facebook.com/profile.php?id=' + self.userid
 		else:
 			url = 'https://m.facebook.com/' + self.userid
-		r = s.get(url, headers = self.__headers, proxies = self.__proxies)
-		html_text = r.text.replace('<!--', '').replace('-->', '')
-		html_doc = pq(html_text)
-
-		# 获取每一条说说的内容
-		# 含有aria-label="Open story"的a标签
-		# 拼接url: https://m.facebook.com/
-		section_node = html_doc('section')
-		posts_node = html_doc('article')
-		posts_count = 0
-		for node in posts_node.items():
-			href = html.unescape(node('a:first[aria-label="Open story"]').attr('href'))
-			posts_count += 1
-
-
-		# 获取下一页说说列表链接，直到匹配不到或posts_url_list超过20条
-		# 正则匹配含有replace_id的href链接
-		next_url_obj = re.compile(r'href:"(\S*)replace_id=(\S*?)",').findall(html_text)
-
-		if next_url_obj:
-			next_url = 'https://m.facebook.com' + next_url_obj[0][0] + 'replace_id=' + next_url_obj[0][1]
-			# 能找得到下一页的url或者已存储说说内容超过20条
-			while ((posts_count <= 50) and next_url != ''):
-				r = s.get(next_url, headers = self.__headers, proxies = self.__proxies)
-
-				# 尝试解析响应内容
-				try:
-					resp = json.loads(r.text.replace('for (;;);', ''))
-				except Exception as e:
-					print('getting posts: decode next_url content error')
-					break
-
-				# 提取post内容和js内容
-				post_content = resp['payload']['actions'][0]['html']
-				js_code = resp['payload']['actions'][2]['code']
-
-				# 解析post
-				dom = pq(post_content)
-				next_article_node = dom('article')
-				for node in next_article_node.items():
-					section_node.append(node.html())
-					posts_count += 1
-
-				# 尝试获取下一页url
-				try:
-					cursor, start_time, profile_id, replace_id = re.compile(r'cursor=(.*?)&start_time=(.*?)&profile_id=(.*?)&replace_id=(.*?)"').findall(js_code)[0]
-				except Exception as e:
-					break
-
-				# 拼接下一页url
-				next_url = 'https://m.facebook.com/profile/timeline/stream/?cursor=' + cursor + '&start_time=' + start_time + '&profile_id=' + profile_id + '&replace_id=' + replace_id
-
-		posts_html = section_node.html()
-
-		# 修正脏数据
-		dirty = set(re.compile(r'\\\\.{2} ').findall(posts_html))
-		for x in dirty:
-			posts_html = posts_html.replace(x, '%' + x[2] + x[3])
-		self.posts = parse.unquote(posts_html)
+		driver.get(url)
+		time.sleep(10)
+		for x in range(1,3):
+			driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+			time.sleep(5)
+		html = driver.page_source
+		driver.close()
+		driver.quit()
+		with open('test.html', 'w', encoding = 'utf-8') as f:
+			f.write(html)
 
 	def get_photos(self):
 		pass
@@ -250,6 +216,7 @@ class fb_user(object):
 
 	def toJson(self):
 		return {
+			'css': self.css,
 			'basic_info': self.base_info,
 			'friends': self.friends,
 			'avatar_string': self.avatar_string,
