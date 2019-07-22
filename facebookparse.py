@@ -38,7 +38,7 @@ class fb_user(object):
 		self.base_info = {}
 		self.friends = []
 		self.photos = [],
-		self.posts = [],
+		self.posts = '',
 		self.videos = [],
 		self.saved_collections = []
 		self.check_ins = []
@@ -159,27 +159,61 @@ class fb_user(object):
 		html_text = r.text.replace('<!--', '').replace('-->', '')
 		html_doc = pq(html_text)
 
-		# 获取每一条说说的url
+		# 获取每一条说说的内容
 		# 含有aria-label="Open story"的a标签
 		# 拼接url: https://m.facebook.com/
+		section_node = html_doc('section')
 		posts_node = html_doc('article')
-		posts_url_list = []
+		posts_count = 0
 		for node in posts_node.items():
 			href = html.unescape(node('a:first[aria-label="Open story"]').attr('href'))
-			posts_url_list.append('https://m.facebook.com' + href)
+			posts_count += 1
 
 
 		# 获取下一页说说列表链接，直到匹配不到或posts_url_list超过20条
 		# 正则匹配含有replace_id的href链接
-		next_url_obj = re.compile(r'href:"(\S*)replace_id=(\S*?)",').findall(html_text)[0]
-		next_url = 'https://m.facebook.com' + next_url_obj[0] + 'replace_id=' + next_url_obj[1]
-		while (next_url_obj and (len(posts_url_list) <= 20) and next_url != ''):
-			#next_url = 'https://m.facebook.com' + next_url_obj[0] + 'replace_id=' + next_url_obj[1]
-			r = s.get(next_url, headers = self.__headers, proxies = self.__proxies)
-			next_url = re.compile(r'"cmd":"replace",(.*?)"html":"(.*?)",').findall(r.text)
-			print(next_url[0])
-			break
+		next_url_obj = re.compile(r'href:"(\S*)replace_id=(\S*?)",').findall(html_text)
 
+		if next_url_obj:
+			next_url = 'https://m.facebook.com' + next_url_obj[0][0] + 'replace_id=' + next_url_obj[0][1]
+			# 能找得到下一页的url或者已存储说说内容超过20条
+			while ((posts_count <= 50) and next_url != ''):
+				r = s.get(next_url, headers = self.__headers, proxies = self.__proxies)
+
+				# 尝试解析响应内容
+				try:
+					resp = json.loads(r.text.replace('for (;;);', ''))
+				except Exception as e:
+					print('getting posts: decode next_url content error')
+					break
+
+				# 提取post内容和js内容
+				post_content = resp['payload']['actions'][0]['html']
+				js_code = resp['payload']['actions'][2]['code']
+
+				# 解析post
+				dom = pq(post_content)
+				next_article_node = dom('article')
+				for node in next_article_node.items():
+					section_node.append(node.html())
+					posts_count += 1
+
+				# 尝试获取下一页url
+				try:
+					cursor, start_time, profile_id, replace_id = re.compile(r'cursor=(.*?)&start_time=(.*?)&profile_id=(.*?)&replace_id=(.*?)"').findall(js_code)[0]
+				except Exception as e:
+					break
+
+				# 拼接下一页url
+				next_url = 'https://m.facebook.com/profile/timeline/stream/?cursor=' + cursor + '&start_time=' + start_time + '&profile_id=' + profile_id + '&replace_id=' + replace_id
+
+		posts_html = section_node.html()
+
+		# 修正脏数据
+		dirty = set(re.compile(r'\\\\.{2} ').findall(posts_html))
+		for x in dirty:
+			posts_html = posts_html.replace(x, '%' + x[2] + x[3])
+		self.posts = parse.unquote(posts_html)
 
 	def get_photos(self):
 		pass
@@ -246,9 +280,8 @@ def main():
 	args = parser.parse_args()
 
 	fb = fb_user(args)
-	# with open('test.txt', 'w', encoding = 'utf-8') as f:
-	# 	f.write(json.dumps(fb, default = lambda obj: obj.__dict__))
+	with open('test.txt', 'w', encoding = 'utf-8') as f:
+		f.write(json.dumps(fb, default = lambda obj: obj.__dict__))
 
 if __name__ == '__main__':
 	main()
-
