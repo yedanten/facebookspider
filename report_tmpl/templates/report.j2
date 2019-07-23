@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<title>report</title>
+	<meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<link type="text/css" rel="stylesheet" href="https://static.xx.fbcdn.net/rsrc.php/v3/yg/l/0,cross/CJg16DUXDfx.css" data-bootloader-hash="6cvse" crossorigin="anonymous" /><link type="text/css" rel="stylesheet" href="https://static.xx.fbcdn.net/rsrc.php/v3/yb/l/0,cross/yCRcpsZyksP.css" data-bootloader-hash="BNgqp" crossorigin="anonymous" /><link type="text/css" rel="stylesheet" href="https://static.xx.fbcdn.net/rsrc.php/v3/yP/l/0,cross/yuKZhQsJ53Y.css" data-bootloader-hash="QyHBF" crossorigin="anonymous" /><link type="text/css" rel="stylesheet" href="https://static.xx.fbcdn.net/rsrc.php/v3/yT/l/0,cross/AORebdKMuVk.css" data-bootloader-hash="S4BGr" crossorigin="anonymous" /><link type="text/css" rel="stylesheet" href="https://static.xx.fbcdn.net/rsrc.php/v3/yI/l/0,cross/Gt9uu42tC3Q.css" data-bootloader-hash="Uaaa1" crossorigin="anonymous" />
+</head>
+<body>
+<div>
+
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#base-info" aria-controls="base-info" role="tab" data-toggle="tab">Base-info</a></li>
+    <li role="presentation"><a href="#friends" aria-controls="friends" role="tab" data-toggle="tab">Friends</a></li>
+    <li><a href="posts/{{ name }}.html">Posts</a></li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="base-info">
+      {% autoescape false %}
+        {% for key, value in user.base_info.items() %}
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">{{ key }}</h3>
+            </div>
+            <div class="panel-body">
+              {% for v in value %}
+                {{ v }}<br />
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endautoescape %}
+    </div>
+    <div role="tabpanel" class="tab-pane" id="friends">
+      <div class="list-group">
+        {% autoescape false %}
+          {% for x in user.friends %}
+            <a class="list-group-item" href="https://m.facebook.com{{ x['uri'] }}">{{ x['name'] }}</a>
+          {% endfor %}
+        {% endautoescape %}
+      </div>
+    </div>
+    <div role="tabpanel" class="tab-pane" id="posts">
+      <a href="{{ name }}.html">posts</a>
+    </div>
+  </div>
+
+</div>
+
+</body>
+<script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script type="text/javascript">
+$('#myTabs a').click(function (e) {
+  e.preventDefault()
+  $(this).tab('show')
+})
+</script>
+</html>
