@@ -274,7 +274,7 @@ def main():
 	args = parser.parse_args()
 
 	# 检查目录是否存在
-	if os.path.exists('follow_res/posts'):
+	if not os.path.exists('follow_res/posts'):
 		os.makedirs('follow_res/posts')
 
 	# 建立用户模型
