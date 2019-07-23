@@ -64,9 +64,9 @@ class fb_user(object):
 		else:
 			self.__action()
 
-    # 执行获取信息操作
+	# 执行获取信息操作
 	def __action(self, follow = False):
-        # 建立子线程
+		# 建立子线程
 		thread_list = []
 		if self.__detailed:
 			thread_list.append(threading.Thread(target = self.get_base_info, name = "getbase"))
@@ -83,15 +83,15 @@ class fb_user(object):
 			if self.__avatar:
 				thread_list.append(threading.Thread(target = self.get_avatar, name = "getavatar"))
 
-        # 开启爬取任务
+		# 开启爬取任务
 		for thread in thread_list:
 			thread.start()
 
-        # 等待所有子线程都完成爬取任务
+		# 等待所有子线程都完成爬取任务
 		for thread in thread_list:
 			thread.join()
 
-    # 分割cookies字符串，提供给selenuim使用
+	# 分割cookies字符串，提供给selenuim使用
 	def __extract_cookies(self, cookie):
 		cookies = cookie.split("; ")
 		return cookies
@@ -103,29 +103,29 @@ class fb_user(object):
 		s.mount('http://', HTTPAdapter(max_retries=3))
 		s.mount('https://', HTTPAdapter(max_retries=3))
 
-        # 调用graphAPI获取
+		# 调用graphAPI获取
 		pic_url = 'https://graph.facebook.com/' + self.userid + '/picture?type=large'
 		r = s.get(pic_url, headers = self.__headers, proxies = self.__proxies)
 
-        # 将头像图片base64编码后存放
+		# 将头像图片base64编码后存放
 		self.avatar_string = str(base64.b64encode(r.content), encoding = 'utf-8')
 		print('got avatar')
 
-    # 获取基础信息
+	# 获取基础信息
 	def get_base_info(self):
 		print('getting basic info……')
 		s = requests.Session()
 		s.mount('http://', HTTPAdapter(max_retries=3))
 		s.mount('https://', HTTPAdapter(max_retries=3))
 
-        # 根据提供的是user_id还是username进行拼接不同的url
+		# 根据提供的是user_id还是username进行拼接不同的url
 		if self.userid.isdigit():
 			url = 'https://m.facebook.com/profile.php?id=' + self.userid + '&v=info'
 		else:
 			url = 'https://m.facebook.com/' + self.userid + '/?v=info'
 		r = s.get(url, headers = self.__headers, proxies = self.__proxies)
 
-        # 选中class为aboutme的节点
+		# 选中class为aboutme的节点
 		html_doc = pq(r.text)
 		aboutme_node = html_doc('.aboutme')
 		
@@ -139,14 +139,14 @@ class fb_user(object):
 			self.base_info.update({key:value})
 		print('got basic info')
 
-    # 获取朋友列表
+	# 获取朋友列表
 	def get_friends(self):
 		print('getting friends……')
 		s = requests.Session()
 		s.mount('http://', HTTPAdapter(max_retries=3))
 		s.mount('https://', HTTPAdapter(max_retries=3))
 
-        # 根据提供的是user_id还是username进行拼接不同的url
+		# 根据提供的是user_id还是username进行拼接不同的url
 		if self.userid.isdigit():
 			url = 'https://m.facebook.com/profile.php?id=' + self.userid + '&v=friends'
 		else:
@@ -154,8 +154,8 @@ class fb_user(object):
 
 		friends_list = []
 
-        # 因移动端滚动页面至底部才能获取更多好友信息，每一页的url参数都由服务端生成，下一页的url在本次的响应内容中
-        # 因此需要不停的请求直到返回的更多好友信息为空
+		# 因移动端滚动页面至底部才能获取更多好友信息，每一页的url参数都由服务端生成，下一页的url在本次的响应内容中
+		# 因此需要不停的请求直到返回的更多好友信息为空
 		pattern = re.compile(r'id:"m_more_friends",href:"(.*?)",')
 		while True:
 			r = s.get(url, headers = self.__headers, proxies = self.__proxies)
@@ -174,10 +174,10 @@ class fb_user(object):
 		self.friends = friends_list
 		print('got friends')
 
-    # 获取动态信息
-    # 这html太难解析了，图片类，文字类，活动类，投票类，原创发布和分享转发都不一样
-    # 获取每页的article标签内容可以拿到该条动态的整段html，但是页面渲染使用的css每页都不一样，会被js进行动态调整
-    # 为了渲染报告方便，使用selenuim进行访问，拿到最终的所有html源码，直接保存
+	# 获取动态信息
+	# 这html太难解析了，图片类，文字类，活动类，投票类，原创发布和分享转发都不一样
+	# 获取每页的article标签内容可以拿到该条动态的整段html，但是页面渲染使用的css每页都不一样，会被js进行动态调整
+	# 为了渲染报告方便，使用selenuim进行访问，拿到最终的所有html源码，直接保存
 	def get_posts(self, flag):
 		print('getting posts……')
 		options = webdriver.ChromeOptions()
@@ -190,37 +190,37 @@ class fb_user(object):
 		options.add_argument('--proxy-server=http://127.0.0.1:1080')
 		driver = webdriver.Chrome(chrome_options=options)
 
-        # 先访问一次facebook页面
+		# 先访问一次facebook页面
 		driver.get('https://m.facebook.com')
 		
-        # 通过寻找指定元素确定页面是否存在还是有bug，超时会抛异常
-        # 这里使用sleep进行强制等待
-        # 欢迎提issue或pull requests一起改进
+		# 通过寻找指定元素确定页面是否存在还是有bug，超时会抛异常
+		# 这里使用sleep进行强制等待
+		# 欢迎提issue或pull requests一起改进
 		time.sleep(10)
 
-        # 添加cookies
+		# 添加cookies
 		for x in self.__extract_cookies(self.__headers['cookie']):
 			driver.add_cookie({'name': x.split('=')[0], 'value': x.split('=')[1]})
 
-        # 根据提供的是user_id还是username进行拼接不同的url
+		# 根据提供的是user_id还是username进行拼接不同的url
 		if self.userid.isdigit():
 			url = 'https://m.facebook.com/profile.php?id=' + self.userid
 		else:
 			url = 'https://m.facebook.com/' + self.userid
 
-        # 访问目标主页
+		# 访问目标主页
 		driver.get(url)
 		time.sleep(10)
 
-        # 向下滑动页面至底部10次
+		# 向下滑动页面至底部10次
 		for x in range(1,10):
 			driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 			time.sleep(5)
 
-        # 保存源码
+		# 保存源码
 		html = driver.page_source
 
-        # 退出chrome handless
+		# 退出chrome handless
 		driver.close()
 		driver.quit()
 
@@ -261,7 +261,7 @@ class fb_user(object):
 		pass
 
 def main():
-    # 解析命令行参数
+	# 解析命令行参数
 	parser = argparse.ArgumentParser(description = '获取facebook用户公开的信息')
 	parser.add_argument('--cookies', dest = 'cookies', required = True, help = '提供已登录账号的cookies供爬虫使用')
 	parser.add_argument('-u', '--url', dest = 'url', required = True, help = '目标用户的主页地址 例:https://www.facebook.com/profile.php?id=1000 或 https://www.facebook.com/Jackma')
@@ -274,14 +274,14 @@ def main():
 	parser.add_argument('--follow', dest = 'follow', action = 'store_true', help = '跟随爬取目标用户的朋友列表')
 	args = parser.parse_args()
 
-    # 检查目录是否存在
+	# 检查目录是否存在
 	if os.path.exists('follow_res/posts'):
-        os.makedirs('follow_res/posts')
+		os.makedirs('follow_res/posts')
 
-    # 建立用户模型
+	# 建立用户模型
 	fb = fb_user(args)
 
-    # 将爬取的信息以html形式进行渲染
+	# 将爬取的信息以html形式进行渲染
 	env = Environment(loader=PackageLoader('report_tmpl'))
 	template = env.get_template('report.j2')
 	content = template.render(user = fb, name = 'target')
@@ -291,11 +291,11 @@ def main():
 	with open('report_post.html', 'w', encoding = 'utf-8') as f:
 		f.write(fb.posts)
 
-    # 如果指定跟随爬取，则进一步获取
+	# 如果指定跟随爬取，则进一步获取
 	if args.follow:
 		for f in fb.friends:
-            # 处理可能存在的用户uri为空的情况
-            # 例如账号被封禁或主动注销
+			# 处理可能存在的用户uri为空的情况
+			# 例如账号被封禁或主动注销
 			if f['uri']:
 				print('getting ' + f['name'] + ' info')
 
