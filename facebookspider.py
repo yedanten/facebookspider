@@ -11,7 +11,6 @@ from urllib import parse
 import re
 import threading
 from selenium import webdriver
-from selenium.webdriver.common.touch_actions import TouchActions
 from jinja2 import Environment, PackageLoader
 import os
 

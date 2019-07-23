@@ -14,7 +14,7 @@ git clone git@github.com:yedanten/facebookspider.git
 
 安装依赖  
 ```bash
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```  
 
 # 使用帮助  
